@@ -10,8 +10,7 @@ import {
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useAppDispatch } from "@/store/hooks";
-import { addNote } from "@/store/slices/notesSlice";
-import { NoteType } from "@/store/types";
+import { addNoteAsync } from "@/store/slices/notesSlice";
 
 export default function AddNoteScreen() {
   const dispatch = useAppDispatch();
@@ -24,20 +23,19 @@ export default function AddNoteScreen() {
     setSelectedTag(tag);
   };
 
-  const handleDonePress = () => {
+  const handleDonePress = async () => {
     if (!title.trim() || !body.trim() || !selectedTag) {
       return;
     }
 
-    const newNote: NoteType = {
-      id: Date.now().toString(),
+    const newNote = {
       title: title.trim(),
       body: body.trim(),
       tag: selectedTag,
       date: new Date().toISOString().split('T')[0],
     };
 
-    dispatch(addNote(newNote));
+    await dispatch(addNoteAsync(newNote));
     router.back();
   };
 

@@ -1,15 +1,20 @@
-import { Alert, FlatList, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
+import { useEffect } from 'react';
+import { ActivityIndicator, Alert, FlatList, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { deleteNote, setSearchQuery } from '@/store/slices/notesSlice';
+import { deleteNoteAsync, fetchNotes, setSearchQuery } from '@/store/slices/notesSlice';
 import { NoteType } from '@/store/types';
 import { router } from 'expo-router';
 
 export default function HomeScreen() {
   const dispatch = useAppDispatch();
-  const { notes, searchQuery } = useAppSelector((state) => state.notes);
+  const { notes, searchQuery, loading, error } = useAppSelector((state) => state.notes);
+
+  useEffect(() => {
+    dispatch(fetchNotes());
+  }, [dispatch]);
 
   const filteredNotes = notes.filter(note => 
     note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -32,7 +37,7 @@ export default function HomeScreen() {
 
         Alert.alert('Delete Note', 'Are you sure you want to delete this note?', [
           { text: 'Cancel', style: 'cancel' },
-          { text: 'Delete', onPress: () => dispatch(deleteNote(item.id)) },
+          { text: 'Delete', onPress: () => dispatch(deleteNoteAsync(item.id)) },
         ]);
 
 
@@ -77,14 +82,32 @@ export default function HomeScreen() {
     
       </ThemedView>
     
-      <FlatList
-        data={filteredNotes}
-        renderItem={renderNote}
-        keyExtractor={item => item.id}
-        horizontal={false}
-        showsVerticalScrollIndicator={false}
-        style={styles.list}
-      />
+      {loading && notes.length === 0 ? (
+        <ThemedView style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#b494f0" />
+          <ThemedText style={{ marginTop: 10, color: '#9BA1A6' }}>Loading notes...</ThemedText>
+        </ThemedView>
+      ) : error ? (
+        <ThemedView style={styles.errorContainer}>
+          <ThemedText style={{ color: '#ff6b6b' }}>{error}</ThemedText>
+        </ThemedView>
+      ) : (
+        <FlatList
+          data={filteredNotes}
+          renderItem={renderNote}
+          keyExtractor={item => item.id}
+          horizontal={false}
+          showsVerticalScrollIndicator={false}
+          style={styles.list}
+          ListEmptyComponent={
+            <ThemedView style={styles.emptyContainer}>
+              <ThemedText style={{ color: '#9BA1A6', textAlign: 'center' }}>
+                No notes found. Create your first note!
+              </ThemedText>
+            </ThemedView>
+          }
+        />
+      )}
   
     </ThemedView>
   );
@@ -130,5 +153,19 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 3,
   },
-  
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  emptyContainer: {
+    padding: 40,
+    alignItems: 'center',
+  },
 });

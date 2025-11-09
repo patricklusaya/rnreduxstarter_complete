@@ -1,67 +1,132 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import {
+  addNoteToFirestore,
+  deleteNoteFromFirestore,
+  getAllNotes,
+  updateNoteInFirestore,
+} from '@/services/firestoreService';
+import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { NoteType } from '../types';
 
 interface NotesState {
   notes: NoteType[];
   searchQuery: string;
+  loading: boolean;
+  error: string | null;
 }
 
 const initialState: NotesState = {
-  notes: [
-    {
-      id: '1',
-      title: 'Shopping List',
-      body: 'Buy milk, eggs, bread, and coffee.',
-      tag: 'Personal',
-      date: '2024-06-09'
-    },
-    {
-      id: '2',
-      title: 'Work Tasks',
-      body: 'Review pull requests and write documentation.',
-      tag: 'Work',
-      date: '2024-06-08'
-    },
-    {
-      id: '3',
-      title: 'Travel Plans',
-      body: 'Pack bags and print tickets.',
-      tag: 'Travel',
-      date: '2024-06-07'
-    },
-    {
-      id: '4',
-      title: 'Birthday Reminder',
-      body: 'Call Emma for birthday wishes.',
-      tag: 'Reminder',
-      date: '2024-06-12'
-    },
-  ],
+  notes: [],
   searchQuery: '',
+  loading: false,
+  error: null,
 };
+
+// Async thunks for Firebase operations
+export const fetchNotes = createAsyncThunk('notes/fetchNotes', async () => {
+  return await getAllNotes();
+});
+
+export const addNoteAsync = createAsyncThunk(
+  'notes/addNote',
+  async (note: Omit<NoteType, 'id'>) => {
+    const id = await addNoteToFirestore(note);
+    return { ...note, id } as NoteType;
+  }
+);
+
+export const updateNoteAsync = createAsyncThunk(
+  'notes/updateNote',
+  async (note: NoteType) => {
+    await updateNoteInFirestore(note);
+    return note;
+  }
+);
+
+export const deleteNoteAsync = createAsyncThunk(
+  'notes/deleteNote',
+  async (noteId: string) => {
+    await deleteNoteFromFirestore(noteId);
+    return noteId;
+  }
+);
 
 const notesSlice = createSlice({
   name: 'notes',
   initialState,
   reducers: {
-    addNote: (state, action: PayloadAction<NoteType>) => {
-      state.notes.unshift(action.payload);
-    },
-    updateNote: (state, action: PayloadAction<NoteType>) => {
-      const index = state.notes.findIndex(note => note.id === action.payload.id);
-      if (index !== -1) {
-        state.notes[index] = action.payload;
-      }
-    },
-    deleteNote: (state, action: PayloadAction<string>) => {
-      state.notes = state.notes.filter(note => note.id !== action.payload);
-    },
     setSearchQuery: (state, action: PayloadAction<string>) => {
       state.searchQuery = action.payload;
     },
+    clearError: (state) => {
+      state.error = null;
+    },
+  },
+  extraReducers: (builder) => {
+    // Fetch notes
+    builder
+      .addCase(fetchNotes.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchNotes.fulfilled, (state, action) => {
+        state.loading = false;
+        state.notes = action.payload;
+      })
+      .addCase(fetchNotes.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || 'Failed to fetch notes';
+      });
+
+    // Add note
+    builder
+      .addCase(addNoteAsync.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(addNoteAsync.fulfilled, (state, action) => {
+        state.loading = false;
+        state.notes.unshift(action.payload);
+      })
+      .addCase(addNoteAsync.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || 'Failed to add note';
+      });
+
+    // Update note
+    builder
+      .addCase(updateNoteAsync.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updateNoteAsync.fulfilled, (state, action) => {
+        state.loading = false;
+        const index = state.notes.findIndex(note => note.id === action.payload.id);
+        if (index !== -1) {
+          state.notes[index] = action.payload;
+        }
+      })
+      .addCase(updateNoteAsync.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || 'Failed to update note';
+      });
+
+    // Delete note
+    builder
+      .addCase(deleteNoteAsync.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(deleteNoteAsync.fulfilled, (state, action) => {
+        state.loading = false;
+        state.notes = state.notes.filter(note => note.id !== action.payload);
+      })
+      .addCase(deleteNoteAsync.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || 'Failed to delete note';
+      });
   },
 });
 
-export const { addNote, updateNote, deleteNote, setSearchQuery } = notesSlice.actions;
+export const { setSearchQuery, clearError } = notesSlice.actions;
 export default notesSlice.reducer;
 
