@@ -22,22 +22,25 @@ const initialState: NotesState = {
 };
 
 // Async thunks for Firebase operations
-export const fetchNotes = createAsyncThunk('notes/fetchNotes', async () => {
-  return await getAllNotes();
-});
+export const fetchNotes = createAsyncThunk(
+  'notes/fetchNotes',
+  async (userId: string) => {
+    return await getAllNotes(userId);
+  }
+);
 
 export const addNoteAsync = createAsyncThunk(
   'notes/addNote',
-  async (note: Omit<NoteType, 'id'>) => {
-    const id = await addNoteToFirestore(note);
+  async ({ note, userId }: { note: Omit<NoteType, 'id'>; userId: string }) => {
+    const id = await addNoteToFirestore(note, userId);
     return { ...note, id } as NoteType;
   }
 );
 
 export const updateNoteAsync = createAsyncThunk(
   'notes/updateNote',
-  async (note: NoteType) => {
-    await updateNoteInFirestore(note);
+  async ({ note, userId }: { note: NoteType; userId: string }) => {
+    await updateNoteInFirestore(note, userId);
     return note;
   }
 );

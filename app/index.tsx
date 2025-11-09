@@ -11,10 +11,13 @@ import { router } from 'expo-router';
 export default function HomeScreen() {
   const dispatch = useAppDispatch();
   const { notes, searchQuery, loading, error } = useAppSelector((state) => state.notes);
+  const { user } = useAppSelector((state) => state.auth);
 
   useEffect(() => {
-    dispatch(fetchNotes());
-  }, [dispatch]);
+    if (user) {
+      dispatch(fetchNotes(user.uid));
+    }
+  }, [dispatch, user]);
 
   const filteredNotes = notes.filter(note => 
     note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||

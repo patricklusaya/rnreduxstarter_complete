@@ -9,11 +9,12 @@ import {
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { useAppDispatch } from "@/store/hooks";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { addNoteAsync } from "@/store/slices/notesSlice";
 
 export default function AddNoteScreen() {
   const dispatch = useAppDispatch();
+  const { user } = useAppSelector((state) => state.auth);
   const tags = ["Personal", "Work", "Travel", "Reminder"];
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -24,7 +25,7 @@ export default function AddNoteScreen() {
   };
 
   const handleDonePress = async () => {
-    if (!title.trim() || !body.trim() || !selectedTag) {
+    if (!title.trim() || !body.trim() || !selectedTag || !user) {
       return;
     }
 
@@ -35,7 +36,7 @@ export default function AddNoteScreen() {
       date: new Date().toISOString().split('T')[0],
     };
 
-    await dispatch(addNoteAsync(newNote));
+    await dispatch(addNoteAsync({ note: newNote, userId: user.uid }));
     router.back();
   };
 
